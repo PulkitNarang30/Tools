@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Columnar Transposition Decryptor</title>
+</head>
+<body>
+    <h2>Columnar Transposition Decryptor</h2>
+    <p>Paste the ciphertext and enter the keyword to decrypt.</p>
+
+    <textarea id="ciphertext" rows="5" cols="40" placeholder="Enter ciphertext here"></textarea><br><br>
+    <input type="text" id="keyword" placeholder="Enter keyword"><br><br>
+    <button onclick="decrypt()">Decrypt</button>
+
+    <h3>Decrypted Text:</h3>
+    <pre id="output"></pre>
+
+    <script>
+        function getColumnOrder(keyword) {
+            keyword = keyword.toUpperCase();
+            let ranked = [...keyword].map((ch, i) => [ch, i]);
+            ranked.sort();
+            return ranked.map(pair => pair[1]);
+        }
+
+        function decrypt() {
+            let ciphertext = document.getElementById("ciphertext").value;
+            let keyword = document.getElementById("keyword").value;
+            let cols = keyword.length;
+            let rows = Math.ceil(ciphertext.length / cols);
+            let order = getColumnOrder(keyword);
+
+            // Build empty matrix
+            let matrix = Array.from({ length: rows }, () => Array(cols).fill(""));
+            let k = 0;
+
+            // Fill matrix column by column according to order
+            for (let col of order) {
+                for (let row = 0; row < rows; row++) {
+                    matrix[row][col] = ciphertext[k++];
+                }
+            }
+
+            // Read row by row
+            let plaintext = matrix.map(row => row.join("")).join("");
+            document.getElementById("output").innerText = plaintext.replace(/X+$/g, "");
+        }
+    </script>
+</body>
+</html>
