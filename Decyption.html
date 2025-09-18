@@ -1,49 +1,122 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Columnar Transposition Decryptor</title>
+  <meta charset="UTF-8">
+  <title>Columnar Transposition Decryption</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f4f6f9;
+    }
+    h2 {
+      color: #333;
+    }
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      width: 420px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+    }
+    input, button {
+      margin: 10px 0;
+      padding: 10px;
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    button {
+      background: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #output {
+      margin-top: 15px;
+      padding: 15px;
+      background: #eef;
+      border-radius: 6px;
+      word-wrap: break-word;
+    }
+  </style>
 </head>
 <body>
-    <h2>Columnar Transposition Decryptor</h2>
-    <p>Paste the ciphertext and enter the keyword to decrypt.</p>
+  <div class="container">
+    <h2>Decrypt Columnar Transposition</h2>
+    <p>
+      This page extracts the ciphertext from the QR code URL.<br>
+      Enter the keyword you think was used to encrypt the message:
+    </p>
+    
+    <form onsubmit="decryptMessage(event)">
+      <input type="text" id="keyword" placeholder="Enter keyword" required>
+      <button type="submit">Decrypt</button>
+    </form>
+    
+    <div id="output"></div>
+  </div>
 
-    <textarea id="ciphertext" rows="5" cols="40" placeholder="Enter ciphertext here"></textarea><br><br>
-    <input type="text" id="keyword" placeholder="Enter keyword"><br><br>
-    <button onclick="decrypt()">Decrypt</button>
+  <script>
+    // 🔹 Get ciphertext from URL parameter (?data=...)
+    function getCipherFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("data") || "";
+    }
 
-    <h3>Decrypted Text:</h3>
-    <pre id="output"></pre>
+    // 🔹 Determine column order from keyword
+    function getColumnOrder(keyword) {
+      keyword = keyword.toUpperCase();
+      let chars = keyword.split("").map((ch, i) => ({ ch, i }));
+      chars.sort((a, b) => a.ch.localeCompare(b.ch));
+      return chars.map(c => c.i);
+    }
 
-    <script>
-        function getColumnOrder(keyword) {
-            keyword = keyword.toUpperCase();
-            let ranked = [...keyword].map((ch, i) => [ch, i]);
-            ranked.sort();
-            return ranked.map(pair => pair[1]);
+    // 🔹 Columnar Transposition Decryption
+    function columnarDecrypt(ciphertext, keyword) {
+      const cols = keyword.length;
+      const rows = Math.ceil(ciphertext.length / cols);
+      const colOrder = getColumnOrder(keyword);
+
+      // Create empty matrix
+      let matrix = Array.from({ length: rows }, () => Array(cols).fill(""));
+
+      // Fill matrix column by column (according to sorted keyword order)
+      let index = 0;
+      for (let col of colOrder) {
+        for (let row = 0; row < rows; row++) {
+          if (index < ciphertext.length) {
+            matrix[row][col] = ciphertext[index++];
+          }
         }
+      }
 
-        function decrypt() {
-            let ciphertext = document.getElementById("ciphertext").value;
-            let keyword = document.getElementById("keyword").value;
-            let cols = keyword.length;
-            let rows = Math.ceil(ciphertext.length / cols);
-            let order = getColumnOrder(keyword);
+      // Read row by row
+      let plaintext = matrix.map(row => row.join("")).join("");
+      return plaintext.replace(/X+$/g, ""); // remove padding
+    }
 
-            // Build empty matrix
-            let matrix = Array.from({ length: rows }, () => Array(cols).fill(""));
-            let k = 0;
+    // 🔹 Triggered on form submit
+    function decryptMessage(event) {
+      event.preventDefault();
+      const keyword = document.getElementById("keyword").value.trim();
+      const ciphertext = getCipherFromURL().toUpperCase();
 
-            // Fill matrix column by column according to order
-            for (let col of order) {
-                for (let row = 0; row < rows; row++) {
-                    matrix[row][col] = ciphertext[k++];
-                }
-            }
+      if (!ciphertext) {
+        document.getElementById("output").innerText = "❌ No ciphertext found in URL.";
+        return;
+      }
 
-            // Read row by row
-            let plaintext = matrix.map(row => row.join("")).join("");
-            document.getElementById("output").innerText = plaintext.replace(/X+$/g, "");
-        }
-    </script>
+      const plaintext = columnarDecrypt(ciphertext, keyword);
+      document.getElementById("output").innerHTML = `
+        <b>🔒 Ciphertext:</b> ${ciphertext}<br><br>
+        <b>✅ Decrypted Plaintext:</b> ${plaintext}
+      `;
+    }
+  </script>
 </body>
 </html>
